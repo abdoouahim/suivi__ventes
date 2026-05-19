@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Ventes & Stock</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #2980b9;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --bg-color: #f4f6f7;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Écran de verrouillage (Login) */
+        #loginScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-card h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        .login-card input {
+            text-align: center;
+            letter-spacing: 5px;
+            font-size: 20px;
+            margin: 20px 0;
+        }
+
+        /* Application principale (Masquée au début) */
+        #mainApp {
+            display: none;
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        /* Tableau de bord - Statistiques */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+            text-align: center;
+        }
+
+        .stat-box {
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+        }
+        .stat-ca { background-color: var(--accent-color); }
+        .stat-cost { background-color: #7f8c8d; }
+        .stat-profit { background-color: var(--success-color); }
+        .stat-box div { font-size: 24px; margin-top: 5px; }
+
+        /* Disposition de l'application */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 38% 62%;
+            gap: 20px;
+        }
+
+        @media (max-width: 950px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-success { background-color: var(--success-color); }
+        .btn-success:hover { background-color: #219150; }
+        .btn-primary { background-color: var(--accent-color); }
+        .btn-primary:hover { background-color: #1a6699; }
+        .btn-reset { background-color: #95a5a6; padding: 5px 10px; font-size: 12px; width: auto; margin-top: 5px; display: inline-block;}
+        .btn-backup { background-color: var(--warning-color); margin-bottom: 10px; }
+        .btn-backup:hover { background-color: #d35400; }
+        .btn-restore { background-color: #8e44ad; }
+        .btn-restore:hover { background-color: #732d91; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 6px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:hover { background-color: #f8fafc; }
+
+        .delete-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-danger { background-color: #fde8e8; color: #c81e1e; }
+        .badge-success { background-color: #def7ec; color: #03543f; }
+        .badge-warning { background-color: #fef08a; color: #854d0e; }
+
+        .backup-section {
+            background-color: #f1f5f9;
+            border: 2px dashed #cbd5e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .error-msg {
+            color: var(--danger-color);
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen">
+    <div class="login-card">
+        <h2>🔒 Accès Sécurisé</h2>
+        <p style="color: #666; font-size: 14px;">Veuillez entrer le code d'accès pour ouvrir le système</p>
+        <form id="loginForm">
+            <input type="password" id="accessCode" placeholder="••••" required maxlength="8">
+            <button type="submit" class="btn-primary">Entrer</button>
+            <div id="loginError" class="error-msg">❌ Code incorrect ! Réessayez.</div>
+        </form>
+    </div>
+</div>
+
+<div id="mainApp">
+    <div class="container">
+        <h1>Système de Suivi des Ventes & Gestion de Stock</h1>
+
+        <div class="dashboard-stats">
+            <div class="stat-box stat-ca">
+                Chiffre d'Affaires (CA)
+                <div id="totalCA">0.00</div>
+            </div>
+            <div class="stat-box stat-cost">
+                Coût de Revient Total
+                <div id="totalCost">0.00</div>
+            </div>
+            <div class="stat-box stat-profit">
+                Bénéfice Net
+                <div id="totalProfit">0.00</div>
+            </div>
+        </div>
+
+        <div class="main-layout">
+
+            <div>
+                <div class="card">
+                    <h3>Enregistrer une Nouvelle Vente</h3>
+                    <form id="salesForm">
+                        <div class="form-group">
+                            <label for="saleDate">Date de Vente :</label>
+                            <input type="date" id="saleDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="saleProductSelect">Sélectionner l'article :</label>
+                            <select id="saleProductSelect" required onchange="handleProductChange()">
+                                <option value="">-- Choisir un produit disponible --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="costPrice">Coût de Revient Unitaire (PU - Auto) :</label>
+                            <input type="number" id="costPrice" min="0" step="0.01" placeholder="Sélectionnez un produit" readonly style="background-color: #e2e8f0; font-weight: bold;">
+                        </div>
+                        <div class="form-group">
+                            <label for="salePrice">Prix de Vente Unitaire Réel :</label>
+                            <input type="number" id="salePrice" min="0" step="0.01" placeholder="Prix vendu aujourd'hui" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="saleQty">Quantité Vendue (Q) :</label>
+                            <input type="number" id="saleQty" min="1" placeholder="Nombre de pièces vendues" required>
+                        </div>
+                        <button type="submit" class="btn-success">Valider la vente et déduire du stock</button>
+                    </form>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <h3>État Actuel du Stock (Q & PU)</h3>
+                    <table id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>Article / Marque</th>
+                                <th>Prix d'achat (PU)</th>
+                                <th>Disponible (Q)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <center><button class="btn-reset" onclick="resetInventoryToDefault()">Réinitialiser au Stock Initial</button></center>
+                </div>
+
+                <div class="card backup-section">
+                    <h3>🛡️ Centre de Sauvegarde des Données</h3>
+                    <p style="font-size: 13px; color: #64748b; margin-top: -10px; text-align: center;">Téléchargez régulièrement une copie pour éviter toute perte de données.</p>
+                    <button class="btn-backup" onclick="exportDataBackup()">📥 Télécharger Sauvegarde (Fichier JSON)</button>
+
+                    <div style="margin-top: 15px; border-top: 1px solid #cbd5e1; padding-top: 10px;">
+                        <label style="margin-bottom: 8px;"><b>Restaurer depuis une sauvegarde précédente :</b></label>
+                        <input type="file" id="importFile" accept=".json" style="padding: 5px; font-size: 13px; margin-bottom: 8px;">
+                        <button class="btn-restore" onclick="importDataBackup()">📤 Restaurer les Données</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card" style="overflow-x: auto; min-height: 550px;">
+                    <h3>Historique Détaillé des Ventes Journalières</h3>
+                    <table id="salesTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Nom du Produit</th>
+                                <th>Quantité</th>
+                                <th>Coût Total</th>
+                                <th>Vente Totale (CA)</th>
+                                <th>Bénéfice Net</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Système de vérification du code d'accès (2020)
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const codeInput = document.getElementById('accessCode').value;
+        const errorMsg = document.getElementById('loginError');
+
+        if (codeInput === '2020') {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            updateDashboard();
+        } else {
+            errorMsg.style.display = 'block';
+            document.getElementById('accessCode').value = '';
+        }
+    });
+
+    const defaultProducts = [
+        { id: "1", name: 'sneakers midium quality', qty: 24, pu: 75 },
+        { id: "2", name: 'sneakers Low quality', qty: 20, pu: 62 },
+        { id: "3", name: 'sandals " NIKE "', qty: 30, pu: 38 },
+        { id: "4", name: 'sandals girl (1)', qty: 24, pu: 16 },
+        { id: "5", name: 'sandals girl (2)', qty: 24, pu: 16 },
+        { id: "6", name: 'flip-flops "easy to go"', qty: 24, pu: 45 },
+        { id: "7", name: 'sneakers for kids', qty: 9, pu: 65 },
+        { id: "8", name: 'sandals " LOULUEN "', qty: 24, pu: 80 },
+        { id: "9", name: 'sandals " MIKA R&B "', qty: 10, pu: 40 },
+        { id: "10", name: 'SABO for Men', qty: 24, pu: 30 },
+        { id: "11", name: 'Sabo for girls', qty: 30, pu: 24 },
+        { id: "12", name: 'sandals " BZIM Mtarzin"', qty: 24, pu: 50 },
+        { id: "13", name: 'sandals " Jeld "', qty: 24, pu: 95 },
+        { id: "14", name: 'flip-flops " LOULUEN "', qty: 24, pu: 45 },
+        { id: "15", name: 'sandals " Black Gold Brown "', qty: 10, pu: 45 },
+        { id: "16", name: 'Sandals Free style', qty: 24, pu: 60 },
+        { id: "17", name: 'Sandals Proof', qty: 20, pu: 63 }
+    ];
+
+    let products = JSON.parse(localStorage.getItem('pu_products')) || [...defaultProducts];
+    let sales = JSON.parse(localStorage.getItem('pu_sales')) || [];
+
+    document.getElementById('saleDate').valueAsDate = new Date();
+
+    function updateDashboard() {
+        localStorage.setItem('pu_products', JSON.stringify(products));
+        localStorage.setItem('pu_sales', JSON.stringify(sales));
+
+        const select = document.getElementById('saleProductSelect');
+        const previousSelection = select.value;
+        select.innerHTML = '<option value="">-- Choisir un produit disponible --</option>';
+
+        products.forEach(p => {
+            const isOutOfStock = p.qty <= 0 ? 'disabled' : '';
+            select.innerHTML += `<option value="${p.id}" ${isOutOfStock}>${p.name} (Dispo: ${p.qty})</option>`;
+        });
+        select.value = previousSelection;
+
+        const invBody = document.querySelector('#inventoryTable tbody');
+        invBody.innerHTML = '';
+        products.forEach(p => {
+            let badgeClass = 'badge badge-success';
+            if (p.qty === 0) badgeClass = 'badge badge-danger';
+            else if (p.qty <= 5) badgeClass = 'badge badge-warning';
+
+            invBody.innerHTML += `
+                <tr>
+                    <td style="text-align: left; font-weight: 500;">${p.name}</td>
+                    <td style="font-weight: bold; color: #7f8c8d;">${p.pu}</td>
+                    <td><span class="${badgeClass}">${p.qty} pcs</span></td>
+                </tr>
+            `;
+        });
+
+        const salesBody = document.querySelector('#salesTable tbody');
+        salesBody.innerHTML = '';
+
+        let globalCA = 0;
+        let globalCost = 0;
+        let globalProfit = 0;
+
+        sales.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        sales.forEach((s, index) => {
+            globalCA += s.totalCA;
+            globalCost += s.totalCost;
+            globalProfit += s.profit;
+
+            salesBody.innerHTML += `
+                <tr>
+                    <td>${s.date}</td>
+                    <td style="text-align: left; font-weight: 600;">${s.productName}</td>
+                    <td>${s.quantity}</td>
+                    <td>${s.totalCost.toFixed(2)}</td>
+                    <td style="color: var(--accent-color); font-weight: bold;">${s.totalCA.toFixed(2)}</td>
+                    <td style="color: var(--success-color); font-weight: bold;">${s.profit.toFixed(2)}</td>
+                    <td><button class="delete-btn" onclick="deleteSale(${index})">Supprimer</button></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('totalCA').innerText = globalCA.toFixed(2);
+        document.getElementById('totalCost').innerText = globalCost.toFixed(2);
+        document.getElementById('totalProfit').innerText = globalProfit.toFixed(2);
+    }
+
+    function handleProductChange() {
+        const productId = document.getElementById('saleProductSelect').value;
+        const costInput = document.getElementById('costPrice');
+
+        if (productId) {
+            const product = products.find(p => p.id === productId);
+            costInput.value = product.pu;
+        } else {
+            costInput.value = '';
+        }
+        document.getElementById('salePrice').value = '';
+        document.getElementById('saleQty').value = '';
+    }
+
+    document.getElementById('salesForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const date = document.getElementById('saleDate').value;
+        const productId = document.getElementById('saleProductSelect').value;
+        const costPrice = parseFloat(document.getElementById('costPrice').value);
+        const salePrice = parseFloat(document.getElementById('salePrice').value);
+        const quantity = parseInt(document.getElementById('saleQty').value);
+
+        const product = products.find(p => p.id === productId);
+
+        if (!product) return;
+
+        if (product.qty < quantity) {
+            alert(`Désolé ! Quantité insuffisante. Il ne reste que ${product.qty} pièces en stock.`);
+            return;
+        }
+
+        const totalCost = costPrice * quantity;
+        const totalCA = salePrice * quantity;
+        const profit = totalCA - totalCost;
+
+        product.qty -= quantity;
+
+        sales.push({ date, productName: product.name, quantity, totalCost, totalCA, profit });
+
+        document.getElementById('costPrice').value = '';
+        document.getElementById('salePrice').value = '';
+        document.getElementById('saleQty').value = '';
+        document.getElementById('saleProductSelect').value = '';
+        updateDashboard();
+    });
+
+    function deleteSale(index) {
+        if (confirm("En supprimant cette vente, les articles seront rajoutés au stock automatiquement. Confirmer ?")) {
+            const soldItem = sales[index];
+            const prod = products.find(p => p.name === soldItem.productName);
+            if (prod) {
+                prod.qty += soldItem.quantity;
+            }
+            sales.splice(index, 1);
+            updateDashboard();
+        }
+    }
+
+    function resetInventoryToDefault() {
+        if(confirm("Êtes-vous sûr de vouloir réinitialiser le stock aux valeurs initiales ?")) {
+            products = JSON.parse(JSON.stringify(defaultProducts));
+            updateDashboard();
+        }
+    }
+
+    function exportDataBackup() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ products, sales }));
+        const downloadAnchor = document.createElement('a');
+        const today = new Date().toISOString().slice(0, 10);
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `Backup_Stock_Ayoub_${today}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importDataBackup() {
+        const fileInput = document.getElementById('importFile');
+        if (fileInput.files.length === 0) {
+            alert("Veuillez sélectionner un fichier de sauvegarde (.json) d'abord !");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (importedData.products && importedData.sales) {
+                    if (confirm("Voulez-vous écraser les données actuelles et restaurer cette sauvegarde ?")) {
+                        products = importedData.products;
+                        sales = importedData.sales;
+                        updateDashboard();
+                        alert("Données restaurées avec succès ! 🎉");
+                    }
+                } else {
+                    alert("Fichier invalide.");
+                }
+            } catch (err) {
+                alert("Erreur lors de la lecture du fichier.");
+            }
+        };
+        reader.readAsText(file);
+    }
+</script>
+
+</body>
+</html>
